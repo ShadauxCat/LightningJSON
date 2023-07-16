@@ -69,7 +69,7 @@ namespace LightningJSON
 
 		StringData(char const* const data)
 			: m_data(data ? data : "")
-			, m_length(strlen(data))
+			, m_length(data ? strlen(data) : 0)
 			, m_commitData(nullptr)
 		{
 			//
@@ -705,7 +705,50 @@ namespace LightningJSON
 
 		JSONObject();
 		JSONObject(JSONObject const& other);
+		JSONObject(std::nullptr_t) : JSONObject(JSONType::Null) {}
+		JSONObject(signed char value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(short value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(int value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(long value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(long long value) : JSONObject(JSONType::Integer, value) {}
+		JSONObject(unsigned char value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned short value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned int value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned long value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned long long value) : JSONObject(JSONType::Integer, value) {}
+		JSONObject(float value) : JSONObject(JSONType::Double, (long double)(value)) {}
+		JSONObject(double value) : JSONObject(JSONType::Double, (long double)(value)) {}
+		JSONObject(long double value) : JSONObject(JSONType::Double, value) {}
+		JSONObject(bool value) : JSONObject(JSONType::Boolean, value) {}
+		JSONObject(char const* value) : JSONObject(JSONType::String, value) {}
+		JSONObject(char const* value, size_t length) : JSONObject(JSONType::String, value, length) {}
+		JSONObject(StringView const& value) : JSONObject(JSONType::String, value) {}
+		JSONObject(std::string const& value) : JSONObject(JSONType::String, value) {}
+#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
+		JSONObject(std::string_view const& value) : JSONObject(JSONType::String, value) {}
+#endif
 		JSONObject& operator=(JSONObject const& other);
+		JSONObject& operator=(std::nullptr_t) { *this = JSONObject(JSONType::Null); return *this; }
+		JSONObject& operator=(signed char value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(short value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(int value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(long long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned char value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned short value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned int value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned long long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(float value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(double value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(long double value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(bool value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(char const* value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(StringView const& value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(std::string const& value) { *this = JSONObject(value); return *this; }
+#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
+		JSONObject& operator=(std::string_view const& value) { *this = JSONObject(value); return *this; }
+#endif
 
 		StringData const& KeyData() const
 		{
@@ -754,6 +797,12 @@ namespace LightningJSON
 	protected:
 		JSONObject(StringData const& myKey, char const*& data, JSONType expectedType);
 		JSONObject(JSONType statedType, StringView const& data);
+		JSONObject(JSONType statedType, char const* data);
+		JSONObject(JSONType statedType, char const* data, size_t length);
+		JSONObject(JSONType statedType, std::string const& data);
+#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
+		JSONObject(JSONType statedType, std::string_view const& data);
+#endif
 		JSONObject(JSONType statedType, bool data);
 		JSONObject(JSONType statedType, long long data);
 		JSONObject(JSONType statedType, unsigned long long data);

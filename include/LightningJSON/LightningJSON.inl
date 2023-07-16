@@ -38,6 +38,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::operator[](StringView const& key)
 	{
+		// Allow converting an empty node to an object node.
+		if (m_holder->m_type == JSONType::Empty)
+		{
+			*this = Object();
+		}
+
 		StringData keyData(key.data(), key.length());
 		if (m_holder->m_type != JSONType::Object)
 		{
@@ -57,9 +63,28 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::operator[](size_t index)
 	{
-		if (m_holder->m_type != JSONType::Array || index >= m_holder->m_children.asArray.size())
+		// Allow converting an empty node to an object node.
+		if (m_holder->m_type == JSONType::Empty)
+		{
+			*this = Array();
+		}
+
+		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
+		}
+
+		// Expand the size of the array if it's smaller than the given index.
+		if (index >= m_holder->m_children.asArray.size())
+		{
+			size_t const newLength = index + 1;
+
+			m_holder->m_children.asArray.reserve(newLength);
+
+			for (size_t i = m_holder->m_children.asArray.size(); i < newLength; ++i)
+			{
+				m_holder->m_children.asArray.push_back(GetEmpty());
+			}
 		}
 
 		return m_holder->m_children.asArray[index];
@@ -474,6 +499,44 @@ namespace LightningJSON
 		m_holder->m_data = StringData(data.data(), data.length());
 		m_holder->m_data.CommitStorage();
 	}
+
+	inline JSONObject::JSONObject(JSONType statedType, char const* data)
+		: m_holder(Holder::Create())
+		, m_key(nullptr, 0)
+	{
+		::new(m_holder) Holder(statedType);
+		m_holder->m_data = StringData(data);
+		m_holder->m_data.CommitStorage();
+	}
+
+	inline JSONObject::JSONObject(JSONType statedType, char const* data, size_t length)
+		: m_holder(Holder::Create())
+		, m_key(nullptr, 0)
+	{
+		::new(m_holder) Holder(statedType);
+		m_holder->m_data = StringData(data, length);
+		m_holder->m_data.CommitStorage();
+	}
+
+	inline JSONObject::JSONObject(JSONType statedType, std::string const& data)
+		: m_holder(Holder::Create())
+		, m_key(nullptr, 0)
+	{
+		::new(m_holder) Holder(statedType);
+		m_holder->m_data = StringData(data.data(), data.length());
+		m_holder->m_data.CommitStorage();
+	}
+
+#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
+	inline JSONObject::JSONObject(JSONType statedType, std::string_view const& data)
+		: m_holder(Holder::Create())
+		, m_key(nullptr, 0)
+	{
+		::new(m_holder) Holder(statedType);
+		m_holder->m_data = StringData(data.data(), data.length());
+		m_holder->m_data.CommitStorage();
+	}
+#endif
 
 	inline JSONObject::JSONObject(JSONType statedType, bool data)
 		: m_holder(Holder::Create())
