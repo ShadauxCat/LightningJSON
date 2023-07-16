@@ -146,10 +146,22 @@ namespace LightningJSON
 			return m_data[index];
 		}
 
-		std::string ToString() const
+		operator StringView() const
+		{
+			return StringView(m_data, m_length);
+		}
+
+		operator std::string() const
 		{
 			return std::string(m_data, m_length);
 		}
+
+#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
+		operator std::string_view() const
+		{
+			return std::string_view(m_data, m_length);
+		}
+#endif
 
 	private:
 		char const* m_data;
