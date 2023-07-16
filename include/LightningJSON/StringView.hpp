@@ -5,25 +5,25 @@
 
 namespace LightningJSON
 {
-	class string_view
+	class StringView
 	{
 	public:
-		string_view()
+		StringView()
 			: m_data(nullptr)
 			, m_length(0)
 		{}
 
-		string_view(char const* data)
+		StringView(char const* data)
 			: m_data(data)
 			, m_length(strlen(data))
 		{}
 
-		string_view(char const* data, size_t length)
+		StringView(char const* data, size_t length)
 			: m_data(data)
 			, m_length(length)
 		{}
 
-		string_view(string_view const& other) noexcept
+		StringView(StringView const& other) noexcept
 			: m_data(other.m_data)
 			, m_length(other.m_length)
 		{}
@@ -42,6 +42,18 @@ namespace LightningJSON
 		{
 			return m_length;
 		}
+
+		operator std::string() const
+		{
+			return std::string(m_data, m_length);
+		}
+
+#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
+		operator std::string_view() const
+		{
+			return std::string_view(m_data, m_length);
+		}
+#endif
 	private:
 		char const* m_data;
 		size_t m_length;
@@ -50,7 +62,7 @@ namespace LightningJSON
 
 namespace std
 {
-	inline std::ostream& operator<< (std::ostream& out, LightningJSON::string_view const& t)
+	inline std::ostream& operator<< (std::ostream& out, LightningJSON::StringView const& t)
 	{
 		out.write(t.data(), t.length());
 		return out;
