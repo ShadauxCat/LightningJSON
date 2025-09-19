@@ -9,7 +9,7 @@
 
 namespace LightningJSON
 {
-	inline JSONObject const& JSONObject::operator[](StringView const& key) const
+	inline JSONObject const& JSONObject::operator[](std::string_view const& key) const
 	{
 		if (m_holder->m_type != JSONType::Object)
 		{
@@ -36,7 +36,7 @@ namespace LightningJSON
 		return m_holder->m_children.asArray[index];
 	}
 
-	inline JSONObject& JSONObject::operator[](StringView const& key)
+	inline JSONObject& JSONObject::operator[](std::string_view const& key)
 	{
 		// Allow converting an empty node to an object node.
 		if (m_holder->m_type == JSONType::Empty)
@@ -181,7 +181,7 @@ namespace LightningJSON
 		{
 			throw InvalidJSON();
 		}
-		m_holder->m_children.asArray.emplace_back(JSONType::String, StringView(value));
+		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value));
 		return m_holder->m_children.asArray.back();
 	}
 
@@ -191,17 +191,7 @@ namespace LightningJSON
 		{
 			throw InvalidJSON();
 		}
-		m_holder->m_children.asArray.emplace_back(JSONType::String, StringView(value, length));
-		return m_holder->m_children.asArray.back();
-	}
-
-	inline JSONObject& JSONObject::PushBack(StringView const& value)
-	{
-		if (m_holder->m_type != JSONType::Array)
-		{
-			throw InvalidJSON();
-		}
-		m_holder->m_children.asArray.emplace_back(JSONType::String, value);
+		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value, length));
 		return m_holder->m_children.asArray.back();
 	}
 
@@ -211,155 +201,20 @@ namespace LightningJSON
 		{
 			throw InvalidJSON();
 		}
-		m_holder->m_children.asArray.emplace_back(JSONType::String, StringView(value.data(), value.size()));
+		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value.data(), value.size()));
 		return m_holder->m_children.asArray.back();
 	}
 
-#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
 	inline JSONObject& JSONObject::PushBack(std::string_view const& value)
 	{
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
-		m_holder->m_children.asArray.emplace_back(JSONType::String, StringView(value.data(), value.size()));
+		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value.data(), value.size()));
 		return m_holder->m_children.asArray.back();
 	}
-#endif
 
-	inline JSONObject& JSONObject::Insert(StringView const& name, JSONObject const& token)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, token)).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, unsigned long long value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Integer, value)).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, long long value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Integer, value)).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, long double value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Double, value)).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, bool value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Boolean, value)).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, const char* const value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, StringView(value))).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, const char* const value, size_t length)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, StringView(value, length))).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, StringView const& value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(StringView const& name, std::string const& value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
-		return it->value;
-	}
-
-#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
-	inline JSONObject& JSONObject::Insert(StringView const& name, std::string_view const& value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
-		return it->value;
-	}
-#endif
-
-#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, JSONObject const& token)
 	{
 		if (m_holder->m_type != JSONType::Object)
@@ -434,7 +289,7 @@ namespace LightningJSON
 
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, StringView(value))).iterator;
+		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, std::string_view(value))).iterator;
 		return it->value;
 	}
 
@@ -447,20 +302,7 @@ namespace LightningJSON
 
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, StringView(value, length))).iterator;
-		return it->value;
-	}
-
-	inline JSONObject& JSONObject::Insert(std::string_view const& name, StringView const& value)
-	{
-		if (m_holder->m_type != JSONType::Object)
-		{
-			throw InvalidJSON();
-		}
-
-		StringData nameData(name.data(), name.length());
-		nameData.CommitStorage();
-		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
+		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, std::string_view(value, length))).iterator;
 		return it->value;
 	}
 
@@ -488,16 +330,6 @@ namespace LightningJSON
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
 		return it->value;
-	}
-#endif
-
-	inline JSONObject::JSONObject(JSONType statedType, StringView const& data)
-		: m_holder(Holder::Create())
-		, m_key(nullptr, 0)
-	{
-		::new(m_holder) Holder(statedType);
-		m_holder->m_data = StringData(data.data(), data.length());
-		m_holder->m_data.CommitStorage();
 	}
 
 	inline JSONObject::JSONObject(JSONType statedType, char const* data)
@@ -527,7 +359,6 @@ namespace LightningJSON
 		m_holder->m_data.CommitStorage();
 	}
 
-#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
 	inline JSONObject::JSONObject(JSONType statedType, std::string_view const& data)
 		: m_holder(Holder::Create())
 		, m_key(nullptr, 0)
@@ -536,7 +367,6 @@ namespace LightningJSON
 		m_holder->m_data = StringData(data.data(), data.length());
 		m_holder->m_data.CommitStorage();
 	}
-#endif
 
 	inline JSONObject::JSONObject(JSONType statedType, bool data)
 		: m_holder(Holder::Create())
@@ -593,16 +423,6 @@ namespace LightningJSON
 		m_holder->m_data.CommitStorage();
 	}
 
-	inline JSONObject::JSONObject(StringData const& myKey, JSONType statedType, StringView const& data)
-		: m_holder(Holder::Create())
-		, m_key(myKey)
-	{
-		::new(m_holder) Holder(statedType);
-		m_key.CommitStorage();
-		m_holder->m_data = StringData(data.data(), data.length());
-		m_holder->m_data.CommitStorage();
-	}
-
 	inline JSONObject::JSONObject(StringData const& myKey, JSONType statedType, std::string const& data)
 		: m_holder(Holder::Create())
 		, m_key(myKey)
@@ -613,7 +433,6 @@ namespace LightningJSON
 		m_holder->m_data.CommitStorage();
 	}
 
-#ifdef _LIGHTNINGJSON_SUPPORTS_STD_STRING_VIEW
 	inline JSONObject::JSONObject(StringData const& myKey, JSONType statedType, std::string_view const& data)
 		: m_holder(Holder::Create())
 		, m_key(myKey)
@@ -623,7 +442,6 @@ namespace LightningJSON
 		m_holder->m_data = StringData(data.data(), data.length());
 		m_holder->m_data.CommitStorage();
 	}
-#endif
 
 	inline JSONObject::JSONObject(StringData const& myKey, JSONType statedType, bool data)
 		: m_holder(Holder::Create())
@@ -727,7 +545,7 @@ namespace LightningJSON
 					}
 				}
 				outString << '"';
-				outString << StringView(kvp.key.c_str(), kvp.key.length());
+				outString << std::string_view(kvp.key.c_str(), kvp.key.length());
 				outString << "\" : ";
 				kvp.value.BuildJSONString(outString, pretty, tabDepth + 1);
 				first = false;
@@ -817,7 +635,7 @@ namespace LightningJSON
 		}
 		else
 		{
-			outString << StringView(m_holder->m_data.c_str(), m_holder->m_data.length());
+			outString << std::string_view(m_holder->m_data.c_str(), m_holder->m_data.length());
 		}
 	}
 
@@ -1211,7 +1029,7 @@ namespace LightningJSON
 		newHolder->m_data = m_holder->m_data;
 		if (newHolder->m_type == JSONType::Array)
 		{
-			for (int i = 0; i < m_holder->m_children.asArray.size(); ++i)
+			for (size_t i = 0; i < m_holder->m_children.asArray.size(); ++i)
 			{
 				newHolder->m_children.asArray.emplace_back(m_holder->m_children.asArray[i].DeepCopy());
 			}
@@ -1568,6 +1386,8 @@ namespace LightningJSON
 			new(&m_children.asObject) TokenMap();
 			m_children.asObject.Reserve(16);
 			break;
+		default:
+			break;
 		}
 	}
 
@@ -1580,6 +1400,9 @@ namespace LightningJSON
 			break;
 		case JSONType::Object:
 			m_children.asObject.~TokenMap();
+			break;
+
+		default:
 			break;
 		}
 	}
