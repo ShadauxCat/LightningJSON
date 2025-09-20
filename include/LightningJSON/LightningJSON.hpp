@@ -697,25 +697,51 @@ namespace LightningJSON
 			return m_key;
 		}
 
-		class JSONTokenAllocator : public std::allocator<JSONObject>
+		template <class T>
+		class JSONTokenAllocator
 		{
 		public:
-			template< class U, class... Args >
-			void construct(U* p, Args&& ... args)
+			using value_type = T;
+
+			JSONTokenAllocator() = default;
+
+			template<typename U>
+			constexpr JSONTokenAllocator(const JSONTokenAllocator<U>&) noexcept {}
+
+			T* allocate(std::size_t n)
 			{
-				::new((void*)p) U(std::forward<Args>(args)...);
+				if (n > std::allocator_traits<JSONTokenAllocator>::max_size(*this))
+				{
+					throw std::bad_alloc();
+				}
+				return static_cast<T*>(::operator new(n * sizeof(T)));
 			}
 
-			template<class U>
-			struct rebind
+			void deallocate(T* p, std::size_t) noexcept
 			{
-				typedef JSONTokenAllocator other;
-			};
+				::operator delete(p);
+			}
+
+			template<typename U, typename... Args>
+			void construct(U* p, Args&&... args)
+			{
+				new(p) U(std::forward<Args>(args)...);
+			}
+
+			template<typename U>
+			void destroy(U* p) noexcept
+			{
+				p->~U();
+			}
+
+			friend constexpr bool operator==(const JSONTokenAllocator&, const JSONTokenAllocator&) { return true; }
+			friend constexpr bool operator!=(const JSONTokenAllocator&, const JSONTokenAllocator&) { return false; }
 		};
-		friend class JSONTokenAllocator;
+
+		friend class JSONTokenAllocator<JSONObject>;
 
 		typedef SkipProbe::HashMap<StringData, JSONObject> TokenMap;
-		typedef std::vector<JSONObject, JSONTokenAllocator> TokenList;
+		typedef std::vector<JSONObject, JSONTokenAllocator<JSONObject>> TokenList;
 
 		class iterator;
 		typedef iterator const const_iterator;
