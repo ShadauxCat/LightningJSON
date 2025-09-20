@@ -47,6 +47,10 @@
 #	define LIGHTNINGJSON_STRICT 0
 #endif
 
+#ifndef LIGHTNINGJSON_CHECKED
+#	define LIGHTNINJSON_CHECKED 0
+#endif
+
 namespace LightningJSON
 {
 	class StringData
@@ -78,7 +82,7 @@ namespace LightningJSON
 
 		void CommitStorage()
 		{
-			if (!m_commitData)
+			if (m_commitData == nullptr)
 			{
 				m_commitData = new char[m_length + 1];
 				m_commitData[m_length] = '\0';
@@ -89,7 +93,7 @@ namespace LightningJSON
 
 		~StringData()
 		{
-			if (m_commitData)
+			if (m_commitData != nullptr)
 			{
 				delete[] m_commitData;
 			}
@@ -100,7 +104,7 @@ namespace LightningJSON
 			, m_length(other.m_length)
 			, m_commitData(nullptr)
 		{
-			if (other.m_commitData)
+			if (other.m_commitData != nullptr)
 			{
 				CommitStorage(); // Get our own copy of it, there's no refcounting
 			}
@@ -108,7 +112,7 @@ namespace LightningJSON
 
 		StringData& operator=(StringData const& other)
 		{
-			if (m_commitData)
+			if (m_commitData != nullptr)
 			{
 				delete[] m_commitData;
 			}
@@ -117,7 +121,7 @@ namespace LightningJSON
 			m_length = other.m_length;
 			m_commitData = nullptr;
 
-			if (other.m_commitData)
+			if (other.m_commitData != nullptr)
 			{
 				CommitStorage(); // Get our own copy of it, there's no refcounting
 			}
@@ -147,14 +151,24 @@ namespace LightningJSON
 			return m_data[index];
 		}
 
-		operator std::string() const
+		std::string toString() const
 		{
 			return std::string(m_data, m_length);
 		}
 
-		operator std::string_view() const
+		std::string_view toStringView() const
 		{
 			return std::string_view(m_data, m_length);
+		}
+
+		explicit operator std::string() const
+		{
+			return toString();
+		}
+
+		explicit operator std::string_view() const
+		{
+			return toStringView();
 		}
 
 	private:
@@ -542,12 +556,12 @@ namespace LightningJSON
 
 		static JSONObject String(std::string const& data)
 		{
-			return JSONObject(JSONType::String, std::string_view(data.data(), data.length()));
+			return JSONObject(JSONType::String, static_cast<std::string_view>(data));
 		}
 
 		static JSONObject String(std::string_view const& data)
 		{
-			return JSONObject(JSONType::String, std::string_view(data.data(), data.length()));
+			return JSONObject(JSONType::String, data);
 		}
 
 		static JSONObject Number(signed char value) { return Number((long long)(value)); }
@@ -589,14 +603,11 @@ namespace LightningJSON
 			return JSONObject(JSONType::Empty);
 		}
 
+		// The lifetime of jsonStr *must* exceed that of the returned JSONObject,
+		// otherwise the returned data may point to invalid memory.
 		static JSONObject FromString(char const* const jsonStr, size_t const length)
 		{
 			return FromString(std::string_view(jsonStr, length));
-		}
-
-		static JSONObject FromString(std::string const& jsonStr)
-		{
-			return FromString(std::string_view(jsonStr.data(), jsonStr.length()));
 		}
 
 		static JSONObject FromString(std::string_view const& jsonStr)

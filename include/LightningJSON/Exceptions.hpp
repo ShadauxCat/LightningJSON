@@ -8,6 +8,7 @@ namespace LightningJSON
 	class JSONException;
 	class JSONTypeMismatch;
 	class InvalidJSON;
+	class ArrayIndexOutOfRange;
 }
 
 class LightningJSON::JSONException : public std::exception
@@ -48,7 +49,7 @@ public:
 			case JSONType::Array:   return "JSON type mismatch: Expected empty JSON token, but a token was found with type 'array'.";
 			case JSONType::Object:  return "JSON type mismatch: Expected empty JSON token, but a token was found with type 'object'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected empty JSON token, but a token was found with type 'double'.";
-			case JSONType::Empty:   abort(); // This case should never happen.
+			case JSONType::Empty:   return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::Integer:
 			switch (m_foundType)
@@ -60,7 +61,7 @@ public:
 			case JSONType::Object:  return "JSON type mismatch: Expected 'integer', but the type found was 'object'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected 'integer', but the type found was 'double'.";
 			case JSONType::Null:    return "JSON type mismatch: Expected 'integer', but the type found was 'null'.";
-			case JSONType::Integer: abort(); // This case should never happen.
+			case JSONType::Integer: return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::String:
 			switch (m_foundType)
@@ -72,7 +73,7 @@ public:
 			case JSONType::Object:  return "JSON type mismatch: Expected 'string', but the type found was 'object'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected 'string', but the type found was 'double'.";
 			case JSONType::Null:    return "JSON type mismatch: Expected 'string', but the type found was 'null'.";
-			case JSONType::String:  abort(); // This case should never happen.
+			case JSONType::String:  return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::Boolean:
 			switch (m_foundType)
@@ -84,7 +85,7 @@ public:
 			case JSONType::Object:  return "JSON type mismatch: Expected 'boolean', but the type found was 'object'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected 'boolean', but the type found was 'double'.";
 			case JSONType::Null:    return "JSON type mismatch: Expected 'boolean', but the type found was 'null'.";
-			case JSONType::Boolean: abort(); // This case should never happen.
+			case JSONType::Boolean: return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::Array:
 			switch (m_foundType)
@@ -96,7 +97,7 @@ public:
 			case JSONType::Object:  return "JSON type mismatch: Expected 'array', but the type found was 'object'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected 'array', but the type found was 'double'.";
 			case JSONType::Null:    return "JSON type mismatch: Expected 'array', but the type found was 'null'.";
-			case JSONType::Array:   abort(); // This case should never happen.
+			case JSONType::Array:   return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::Object:
 			switch (m_foundType)
@@ -108,7 +109,7 @@ public:
 			case JSONType::Array:   return "JSON type mismatch: Expected 'object', but the type found was 'array'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected 'object', but the type found was 'double'.";
 			case JSONType::Null:    return "JSON type mismatch: Expected 'object', but the type found was 'null'.";
-			case JSONType::Object:  abort(); // This case should never happen.
+			case JSONType::Object:  return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::Double:
 			switch (m_foundType)
@@ -120,7 +121,7 @@ public:
 			case JSONType::Array:   return "JSON type mismatch: Expected 'double', but the type found was 'array'.";
 			case JSONType::Object:  return "JSON type mismatch: Expected 'double', but the type found was 'object'.";
 			case JSONType::Null:    return "JSON type mismatch: Expected 'double', but the type found was 'null'.";
-			case JSONType::Double:  abort(); // This case should never happen.
+			case JSONType::Double:  return "Malformed exception: types match"; // This case should never happen.
 			}
 		case JSONType::Null:
 			switch (m_foundType)
@@ -132,7 +133,7 @@ public:
 			case JSONType::Array:   return "JSON type mismatch: Expected 'null', but the type found was 'array'.";
 			case JSONType::Object:  return "JSON type mismatch: Expected 'null', but the type found was 'object'.";
 			case JSONType::Double:  return "JSON type mismatch: Expected 'null', but the type found was 'double'.";
-			case JSONType::Null:    abort(); // This case should never happen.
+			case JSONType::Null:    return "Malformed exception: types match"; // This case should never happen.
 			}
 		}
 		return "Something went wrong.";
@@ -153,5 +154,18 @@ public:
 	virtual char const* what() const noexcept override
 	{
 		return "Could not parse JSON: Provided JSON data was invalid.";
+	}
+};
+
+class LightningJSON::ArrayIndexOutOfRange : public JSONException
+{
+public:
+	virtual ~ArrayIndexOutOfRange() noexcept
+	{
+
+	}
+	virtual char const* what() const noexcept override
+	{
+		return "Array index is out of range";
 	}
 };

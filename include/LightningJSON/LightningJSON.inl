@@ -74,17 +74,9 @@ namespace LightningJSON
 			throw InvalidJSON();
 		}
 
-		// Expand the size of the array if it's smaller than the given index.
 		if (index >= m_holder->m_children.asArray.size())
 		{
-			size_t const newLength = index + 1;
-
-			m_holder->m_children.asArray.reserve(newLength);
-
-			for (size_t i = m_holder->m_children.asArray.size(); i < newLength; ++i)
-			{
-				m_holder->m_children.asArray.push_back(GetEmpty());
-			}
+			throw ArrayIndexOutOfRange();
 		}
 
 		return m_holder->m_children.asArray[index];
@@ -127,101 +119,120 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::PushBack(JSONObject const& token)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(token);
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(unsigned long long value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::Integer, value);
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(long long value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::Integer, value);
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(long double value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::Double, value);
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(bool value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::Boolean, value);
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(const char* const value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value));
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(const char* const value, size_t length)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value, length));
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(std::string const& value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value.data(), value.size()));
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::PushBack(std::string_view const& value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Array)
 		{
 			throw InvalidJSON();
 		}
+#endif
 		m_holder->m_children.asArray.emplace_back(JSONType::String, std::string_view(value.data(), value.size()));
 		return m_holder->m_children.asArray.back();
 	}
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, JSONObject const& token)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, token)).iterator;
@@ -230,11 +241,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, unsigned long long value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Integer, value)).iterator;
@@ -243,11 +255,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, long long value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Integer, value)).iterator;
@@ -256,11 +269,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, long double value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Double, value)).iterator;
@@ -269,11 +283,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, bool value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::Boolean, value)).iterator;
@@ -282,11 +297,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, const char* const value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, std::string_view(value))).iterator;
@@ -295,11 +311,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, const char* const value, size_t length)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, std::string_view(value, length))).iterator;
@@ -308,11 +325,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, std::string const& value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
@@ -321,11 +339,12 @@ namespace LightningJSON
 
 	inline JSONObject& JSONObject::Insert(std::string_view const& name, std::string_view const& value)
 	{
+#if LIGHTNINJSON_CHECKED
 		if (m_holder->m_type != JSONType::Object)
 		{
 			throw InvalidJSON();
 		}
-
+#endif
 		StringData nameData(name.data(), name.length());
 		nameData.CommitStorage();
 		auto it = m_holder->m_children.asObject.CheckedInsert(nameData, JSONObject(nameData, JSONType::String, value)).iterator;
