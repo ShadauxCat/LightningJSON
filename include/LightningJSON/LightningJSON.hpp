@@ -48,7 +48,7 @@
 #endif
 
 #ifndef LIGHTNINGJSON_CHECKED
-#	define LIGHTNINJSON_CHECKED 0
+#	define LIGHTNINJSON_CHECKED 1
 #endif
 
 namespace LightningJSON
