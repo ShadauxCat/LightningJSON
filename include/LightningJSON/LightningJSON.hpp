@@ -27,16 +27,16 @@
 #pragma warning( disable: 4250; disable: 4996 )
 #endif
 
-
-#if __cplusplus >= 201703L
-#include <string_view>
-#else
-#include "StringView.hpp"
+#if __cplusplus < 201703L
+#	error LightningJSON requires c++17 support
 #endif
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include <stddef.h>
 
 #include "Exceptions.hpp"
 #include "JSONType.hpp"
@@ -47,27 +47,34 @@
 #	define LIGHTNINGJSON_STRICT 0
 #endif
 
+#ifndef LIGHTNINGJSON_CHECKED
+#	define LIGHTNINJSON_CHECKED 1
+#endif
+
 namespace LightningJSON
 {
-#if __cplusplus >= 201703L
-	typedef std::string_view string_view;
-#endif
-	
 	class StringData
 	{
 	public:
+		StringData()
+			: m_data("")
+			, m_length(0)
+			, m_commitData(nullptr)
+		{
+			//
+		}
+
 		StringData(char const* const data, size_t length)
-			: m_data(data)
+			: m_data(data ? data : "")
 			, m_length(length)
 			, m_commitData(nullptr)
 		{
 			//
 		}
 
-
 		StringData(char const* const data)
-			: m_data(data)
-			, m_length(strlen(data))
+			: m_data(data ? data : "")
+			, m_length(data ? strlen(data) : 0)
 			, m_commitData(nullptr)
 		{
 			//
@@ -75,14 +82,18 @@ namespace LightningJSON
 
 		void CommitStorage()
 		{
-			m_commitData = new char[m_length + 1];
-			memcpy(m_commitData, m_data, m_length);
-			m_data = m_commitData;
+			if (m_commitData == nullptr)
+			{
+				m_commitData = new char[m_length + 1];
+				m_commitData[m_length] = '\0';
+				memcpy(m_commitData, m_data, m_length);
+				m_data = m_commitData;
+			}
 		}
 
 		~StringData()
 		{
-			if (m_commitData)
+			if (m_commitData != nullptr)
 			{
 				delete[] m_commitData;
 			}
@@ -91,9 +102,9 @@ namespace LightningJSON
 		StringData(StringData const& other)
 			: m_data(other.m_data)
 			, m_length(other.m_length)
-			, m_commitData(other.m_commitData)
+			, m_commitData(nullptr)
 		{
-			if (m_commitData)
+			if (other.m_commitData != nullptr)
 			{
 				CommitStorage(); // Get our own copy of it, there's no refcounting
 			}
@@ -101,16 +112,20 @@ namespace LightningJSON
 
 		StringData& operator=(StringData const& other)
 		{
-			if (m_commitData)
+			if (m_commitData != nullptr)
 			{
 				delete[] m_commitData;
 			}
+
 			m_data = other.m_data;
 			m_length = other.m_length;
-			if (other.m_commitData)
+			m_commitData = nullptr;
+
+			if (other.m_commitData != nullptr)
 			{
-				CommitStorage();
+				CommitStorage(); // Get our own copy of it, there's no refcounting
 			}
+
 			return *this;
 		}
 
@@ -139,6 +154,21 @@ namespace LightningJSON
 		std::string toString() const
 		{
 			return std::string(m_data, m_length);
+		}
+
+		std::string_view toStringView() const
+		{
+			return std::string_view(m_data, m_length);
+		}
+
+		explicit operator std::string() const
+		{
+			return toString();
+		}
+
+		explicit operator std::string_view() const
+		{
+			return toStringView();
 		}
 
 	private:
@@ -174,9 +204,9 @@ namespace LightningJSON
 		static std::string EscapeString(StringData const& str);
 		static std::string UnescapeString(StringData const& str);
 
-		string_view GetKey() const
+		std::string_view GetKey() const
 		{
-			return string_view(m_key.c_str(), m_key.length());
+			return std::string_view(m_key.c_str(), m_key.length());
 		}
 
 		long long AsInt() const
@@ -328,29 +358,29 @@ namespace LightningJSON
 
 		JSONObject const& operator[](char const* const key) const
 		{
-			return this->operator[](string_view(key, strlen(key)));
+			return this->operator[](std::string_view(key, strlen(key)));
 		}
 
 		JSONObject const& operator[](std::string const& key) const
 		{
-			return this->operator[](string_view(key.c_str(), key.length()));
+			return this->operator[](std::string_view(key.c_str(), key.length()));
 		}
 
-		JSONObject const& operator[](string_view const& key) const;
+		JSONObject const& operator[](std::string_view const& key) const;
 
 		JSONObject const& operator[](size_t index) const;
 
 		JSONObject& operator[](char const* const key)
 		{
-			return this->operator[](string_view(key, strlen(key)));
+			return this->operator[](std::string_view(key, strlen(key)));
 		}
 
 		JSONObject& operator[](std::string const& key)
 		{
-			return this->operator[](string_view(key.c_str(), key.length()));
+			return this->operator[](std::string_view(key.c_str(), key.length()));
 		}
 
-		JSONObject& operator[](string_view const& key);
+		JSONObject& operator[](std::string_view const& key);
 
 		JSONObject& operator[](size_t index);
 		JSONObject& operator[](int index) { return operator[](size_t(index)); }
@@ -400,16 +430,6 @@ namespace LightningJSON
 			return (m_holder->m_type == JSONType::Object);
 		}
 
-		bool HasKey(std::string const& key) const
-		{
-			return IsObject() && m_holder->m_children.asObject.Contains(StringData(key.c_str(), key.length()));
-		}
-
-		bool HasKey(string_view const& key) const
-		{
-			return IsObject() && m_holder->m_children.asObject.Contains(StringData(key.data(), key.length()));
-		}
-
 		bool HasKey(char const* const key) const
 		{
 			return IsObject() && m_holder->m_children.asObject.Contains(StringData(key, strlen(key)));
@@ -418,6 +438,16 @@ namespace LightningJSON
 		bool HasKey(char const* const key, size_t length) const
 		{
 			return IsObject() && m_holder->m_children.asObject.Contains(StringData(key, length));
+		}
+
+		bool HasKey(std::string const& key) const
+		{
+			return IsObject() && m_holder->m_children.asObject.Contains(StringData(key.data(), key.length()));
+		}
+
+		bool HasKey(std::string_view const& key) const
+		{
+			return IsObject() && m_holder->m_children.asObject.Contains(StringData(key.data(), key.length()));
 		}
 
 		size_t Size();
@@ -442,89 +472,94 @@ namespace LightningJSON
 		JSONObject& PushBack(const char* const value);
 		JSONObject& PushBack(const char* const value, size_t length);
 		JSONObject& PushBack(std::string const& value);
-		JSONObject& PushBack(string_view const& value);
+		JSONObject& PushBack(std::string_view const& value);
 
-		JSONObject& Insert(std::string const& name, JSONObject const& token) { return Insert(string_view(name.c_str(), name.length()), token); }
-		JSONObject& Insert(std::string const& name, signed char value) { return Insert(string_view(name.c_str(), name.length()), (long long)(value)); }
-		JSONObject& Insert(std::string const& name, short value) { return Insert(string_view(name.c_str(), name.length()), (long long)(value)); }
-		JSONObject& Insert(std::string const& name, int value) { return Insert(string_view(name.c_str(), name.length()), (long long)(value)); }
-		JSONObject& Insert(std::string const& name, long value) { return Insert(string_view(name.c_str(), name.length()), (long long)(value)); }
-		JSONObject& Insert(std::string const& name, unsigned char value) { return Insert(string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
-		JSONObject& Insert(std::string const& name, unsigned short value) { return Insert(string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
-		JSONObject& Insert(std::string const& name, unsigned int value) { return Insert(string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
-		JSONObject& Insert(std::string const& name, unsigned long value) { return Insert(string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
-		JSONObject& Insert(std::string const& name, unsigned long long value) { return Insert(string_view(name.c_str(), name.length()), value); }
-		JSONObject& Insert(std::string const& name, long long value) { return Insert(string_view(name.c_str(), name.length()), value); }
-		JSONObject& Insert(std::string const& name, float value) { return Insert(string_view(name.c_str(), name.length()), (long double)(value)); }
-		JSONObject& Insert(std::string const& name, double value) { return Insert(string_view(name.c_str(), name.length()), (long double)(value)); }
-		JSONObject& Insert(std::string const& name, long double value) { return Insert(string_view(name.c_str(), name.length()), value); }
-		JSONObject& Insert(std::string const& name, bool value) { return Insert(string_view(name.c_str(), name.length()), value); }
-		JSONObject& Insert(std::string const& name, const char* const value) { return Insert(string_view(name.c_str(), name.length()), value); }
-		JSONObject& Insert(std::string const& name, const char* const value, size_t length) { return Insert(string_view(name.c_str(), name.length()), value, length); }
-		JSONObject& Insert(std::string const& name, std::string const& value) { return Insert(string_view(name.c_str(), name.length()), value); }
-		JSONObject& Insert(std::string const& name, string_view const& value) { return Insert(string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, JSONObject const& token) { return Insert(std::string_view(name.c_str(), name.length()), token); }
+		JSONObject& Insert(std::string const& name, signed char value) { return Insert(std::string_view(name.c_str(), name.length()), (long long)(value)); }
+		JSONObject& Insert(std::string const& name, short value) { return Insert(std::string_view(name.c_str(), name.length()), (long long)(value)); }
+		JSONObject& Insert(std::string const& name, int value) { return Insert(std::string_view(name.c_str(), name.length()), (long long)(value)); }
+		JSONObject& Insert(std::string const& name, long value) { return Insert(std::string_view(name.c_str(), name.length()), (long long)(value)); }
+		JSONObject& Insert(std::string const& name, unsigned char value) { return Insert(std::string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
+		JSONObject& Insert(std::string const& name, unsigned short value) { return Insert(std::string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
+		JSONObject& Insert(std::string const& name, unsigned int value) { return Insert(std::string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
+		JSONObject& Insert(std::string const& name, unsigned long value) { return Insert(std::string_view(name.c_str(), name.length()), (unsigned long long)(value)); }
+		JSONObject& Insert(std::string const& name, unsigned long long value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, long long value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, float value) { return Insert(std::string_view(name.c_str(), name.length()), (long double)(value)); }
+		JSONObject& Insert(std::string const& name, double value) { return Insert(std::string_view(name.c_str(), name.length()), (long double)(value)); }
+		JSONObject& Insert(std::string const& name, long double value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, bool value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, const char* const value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, const char* const value, size_t length) { return Insert(std::string_view(name.c_str(), name.length()), value, length); }
+		JSONObject& Insert(std::string const& name, std::string const& value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
+		JSONObject& Insert(std::string const& name, std::string_view const& value) { return Insert(std::string_view(name.c_str(), name.length()), value); }
 
-		JSONObject& Insert(string_view const& name, JSONObject const& token);
-		JSONObject& Insert(string_view const& name, signed char value) { return Insert(name, (long long)(value)); }
-		JSONObject& Insert(string_view const& name, short value) { return Insert(name, (long long)(value)); }
-		JSONObject& Insert(string_view const& name, int value) { return Insert(name, (long long)(value)); }
-		JSONObject& Insert(string_view const& name, long value) { return Insert(name, (long long)(value)); }
-		JSONObject& Insert(string_view const& name, unsigned char value) { return Insert(name, (unsigned long long)(value)); }
-		JSONObject& Insert(string_view const& name, unsigned short value) { return Insert(name, (unsigned long long)(value)); }
-		JSONObject& Insert(string_view const& name, unsigned int value) { return Insert(name, (unsigned long long)(value)); }
-		JSONObject& Insert(string_view const& name, unsigned long value) { return Insert(name, (unsigned long long)(value)); }
-		JSONObject& Insert(string_view const& name, unsigned long long value);
-		JSONObject& Insert(string_view const& name, long long value);
-		JSONObject& Insert(string_view const& name, float value) { return Insert(name, (long double)(value)); }
-		JSONObject& Insert(string_view const& name, double value) { return Insert(name, (long double)(value)); }
-		JSONObject& Insert(string_view const& name, long double value);
-		JSONObject& Insert(string_view const& name, bool value);
-		JSONObject& Insert(string_view const& name, const char* const value);
-		JSONObject& Insert(string_view const& name, const char* const value, size_t length);
-		JSONObject& Insert(string_view const& name, std::string const& value);
-		JSONObject& Insert(string_view const& name, string_view const& value);
+		JSONObject& Insert(std::string_view const& name, JSONObject const& token);
+		JSONObject& Insert(std::string_view const& name, signed char value) { return Insert(name, (long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, short value) { return Insert(name, (long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, int value) { return Insert(name, (long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, long value) { return Insert(name, (long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, unsigned char value) { return Insert(name, (unsigned long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, unsigned short value) { return Insert(name, (unsigned long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, unsigned int value) { return Insert(name, (unsigned long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, unsigned long value) { return Insert(name, (unsigned long long)(value)); }
+		JSONObject& Insert(std::string_view const& name, unsigned long long value);
+		JSONObject& Insert(std::string_view const& name, long long value);
+		JSONObject& Insert(std::string_view const& name, float value) { return Insert(name, (long double)(value)); }
+		JSONObject& Insert(std::string_view const& name, double value) { return Insert(name, (long double)(value)); }
+		JSONObject& Insert(std::string_view const& name, long double value);
+		JSONObject& Insert(std::string_view const& name, bool value);
+		JSONObject& Insert(std::string_view const& name, const char* const value);
+		JSONObject& Insert(std::string_view const& name, const char* const value, size_t length);
+		JSONObject& Insert(std::string_view const& name, std::string const& value);
+		JSONObject& Insert(std::string_view const& name, std::string_view const& value);
 
-		JSONObject& Insert(char const* const name, JSONObject const& token) { return Insert(string_view(name, strlen(name)), token); }
-		JSONObject& Insert(char const* const name, signed char value) { return Insert(string_view(name, strlen(name)), (long long)(value)); }
-		JSONObject& Insert(char const* const name, short value) { return Insert(string_view(name, strlen(name)), (long long)(value)); }
-		JSONObject& Insert(char const* const name, int value) { return Insert(string_view(name, strlen(name)), (long long)(value)); }
-		JSONObject& Insert(char const* const name, long value) { return Insert(string_view(name, strlen(name)), (long long)(value)); }
-		JSONObject& Insert(char const* const name, unsigned char value) { return Insert(string_view(name, strlen(name)), (unsigned long long)(value)); }
-		JSONObject& Insert(char const* const name, unsigned short value) { return Insert(string_view(name, strlen(name)), (unsigned long long)(value)); }
-		JSONObject& Insert(char const* const name, unsigned int value) { return Insert(string_view(name, strlen(name)), (unsigned long long)(value)); }
-		JSONObject& Insert(char const* const name, unsigned long value) { return Insert(string_view(name, strlen(name)), (unsigned long long)(value)); }
-		JSONObject& Insert(char const* const name, unsigned long long value) { return Insert(string_view(name, strlen(name)), value); }
-		JSONObject& Insert(char const* const name, long long value) { return Insert(string_view(name, strlen(name)), value); }
-		JSONObject& Insert(char const* const name, float value) { return Insert(string_view(name, strlen(name)), (long double)(value)); }
-		JSONObject& Insert(char const* const name, double value) { return Insert(string_view(name, strlen(name)), (long double)(value)); }
-		JSONObject& Insert(char const* const name, long double value) { return Insert(string_view(name, strlen(name)), value); }
-		JSONObject& Insert(char const* const name, bool value) { return Insert(string_view(name, strlen(name)), value); }
-		JSONObject& Insert(char const* const name, const char* const value) { return Insert(string_view(name, strlen(name)), value); }
-		JSONObject& Insert(char const* const name, const char* const value, size_t length) { return Insert(string_view(name, strlen(name)), value, length); }
-		JSONObject& Insert(char const* const name, std::string const& value) { return Insert(string_view(name, strlen(name)), value); }
-		JSONObject& Insert(char const* const name, string_view const& value) { return Insert(string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, JSONObject const& token) { return Insert(std::string_view(name, strlen(name)), token); }
+		JSONObject& Insert(char const* const name, signed char value) { return Insert(std::string_view(name, strlen(name)), (long long)(value)); }
+		JSONObject& Insert(char const* const name, short value) { return Insert(std::string_view(name, strlen(name)), (long long)(value)); }
+		JSONObject& Insert(char const* const name, int value) { return Insert(std::string_view(name, strlen(name)), (long long)(value)); }
+		JSONObject& Insert(char const* const name, long value) { return Insert(std::string_view(name, strlen(name)), (long long)(value)); }
+		JSONObject& Insert(char const* const name, unsigned char value) { return Insert(std::string_view(name, strlen(name)), (unsigned long long)(value)); }
+		JSONObject& Insert(char const* const name, unsigned short value) { return Insert(std::string_view(name, strlen(name)), (unsigned long long)(value)); }
+		JSONObject& Insert(char const* const name, unsigned int value) { return Insert(std::string_view(name, strlen(name)), (unsigned long long)(value)); }
+		JSONObject& Insert(char const* const name, unsigned long value) { return Insert(std::string_view(name, strlen(name)), (unsigned long long)(value)); }
+		JSONObject& Insert(char const* const name, unsigned long long value) { return Insert(std::string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, long long value) { return Insert(std::string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, float value) { return Insert(std::string_view(name, strlen(name)), (long double)(value)); }
+		JSONObject& Insert(char const* const name, double value) { return Insert(std::string_view(name, strlen(name)), (long double)(value)); }
+		JSONObject& Insert(char const* const name, long double value) { return Insert(std::string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, bool value) { return Insert(std::string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, const char* const value) { return Insert(std::string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, const char* const value, size_t length) { return Insert(std::string_view(name, strlen(name)), value, length); }
+		JSONObject& Insert(char const* const name, std::string const& value) { return Insert(std::string_view(name, strlen(name)), value); }
+		JSONObject& Insert(char const* const name, std::string_view const& value) { return Insert(std::string_view(name, strlen(name)), value); }
 
 		static JSONObject Array()
 		{
-			return JSONObject(JSONType::Array, string_view());
+			return JSONObject(JSONType::Array, std::string_view());
 		}
 
 		static JSONObject Object()
 		{
-			return JSONObject(JSONType::Object, string_view());
+			return JSONObject(JSONType::Object, std::string_view());
 		}
 
 		static JSONObject String(char const* const data)
 		{
-			return JSONObject(JSONType::String, string_view(data));
+			return JSONObject(JSONType::String, std::string_view(data));
 		}
 
 		static JSONObject String(char const* const data, size_t length)
 		{
-			return JSONObject(JSONType::String, string_view(data, length));
+			return JSONObject(JSONType::String, std::string_view(data, length));
 		}
 
-		static JSONObject String(string_view const& data)
+		static JSONObject String(std::string const& data)
+		{
+			return JSONObject(JSONType::String, static_cast<std::string_view>(data));
+		}
+
+		static JSONObject String(std::string_view const& data)
 		{
 			return JSONObject(JSONType::String, data);
 		}
@@ -568,8 +603,20 @@ namespace LightningJSON
 			return JSONObject(JSONType::Empty);
 		}
 
-		static JSONObject FromString(string_view const& jsonStr)
+		// The lifetime of jsonStr *must* exceed that of the returned JSONObject,
+		// otherwise the returned data may point to invalid memory.
+		static JSONObject FromString(char const* const jsonStr, size_t const length)
 		{
+			return FromString(std::string_view(jsonStr, length));
+		}
+
+		static JSONObject FromString(std::string_view const& jsonStr)
+		{
+			if(!jsonStr.data() || jsonStr.length() == 0)
+			{
+				return GetEmpty();
+			}
+
 			char const* data = jsonStr.data();
 			SkipWhitespace(data);
 			JSONType type = JSONType::Empty;
@@ -605,38 +652,96 @@ namespace LightningJSON
 
 		JSONObject();
 		JSONObject(JSONObject const& other);
+		JSONObject(std::nullptr_t) : JSONObject(JSONType::Null) {}
+		JSONObject(signed char value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(short value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(int value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(long value) : JSONObject(JSONType::Integer, (long long)(value)) {}
+		JSONObject(long long value) : JSONObject(JSONType::Integer, value) {}
+		JSONObject(unsigned char value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned short value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned int value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned long value) : JSONObject(JSONType::Integer, (unsigned long long)(value)) {}
+		JSONObject(unsigned long long value) : JSONObject(JSONType::Integer, value) {}
+		JSONObject(float value) : JSONObject(JSONType::Double, (long double)(value)) {}
+		JSONObject(double value) : JSONObject(JSONType::Double, (long double)(value)) {}
+		JSONObject(long double value) : JSONObject(JSONType::Double, value) {}
+		JSONObject(bool value) : JSONObject(JSONType::Boolean, value) {}
+		JSONObject(char const* value) : JSONObject(JSONType::String, value) {}
+		JSONObject(char const* value, size_t length) : JSONObject(JSONType::String, value, length) {}
+		JSONObject(std::string const& value) : JSONObject(JSONType::String, value) {}
+		JSONObject(std::string_view const& value) : JSONObject(JSONType::String, value) {}
+
 		JSONObject& operator=(JSONObject const& other);
+		JSONObject& operator=(std::nullptr_t) { *this = JSONObject(JSONType::Null); return *this; }
+		JSONObject& operator=(signed char value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(short value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(int value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(long long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned char value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned short value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned int value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(unsigned long long value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(float value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(double value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(long double value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(bool value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(char const* value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(std::string const& value) { *this = JSONObject(value); return *this; }
+		JSONObject& operator=(std::string_view const& value) { *this = JSONObject(value); return *this; }
 
 		StringData const& KeyData() const
 		{
 			return m_key;
 		}
 
-		class JSONTokenAllocator : public std::allocator<JSONObject>
+		template <class T>
+		class JSONTokenAllocator
 		{
 		public:
-			template< class U, class... Args >
-			void construct(U* p, Args&& ... args)
+			using value_type = T;
+
+			JSONTokenAllocator() = default;
+
+			template<typename U>
+			constexpr JSONTokenAllocator(const JSONTokenAllocator<U>&) noexcept {}
+
+			T* allocate(std::size_t n)
 			{
-				::new((void*)p) U(std::forward<Args>(args)...);
+				if (n > std::allocator_traits<JSONTokenAllocator>::max_size(*this))
+				{
+					throw std::bad_alloc();
+				}
+				return static_cast<T*>(::operator new(n * sizeof(T)));
 			}
 
-			template<class U> 
-			struct rebind
+			void deallocate(T* p, std::size_t) noexcept
 			{
-				typedef std::allocator<U> other;
-			};
+				::operator delete(p);
+			}
 
-			template<>
-			struct rebind<JSONObject>
+			template<typename U, typename... Args>
+			void construct(U* p, Args&&... args)
 			{
-				typedef JSONTokenAllocator other;
-			};
+				new(p) U(std::forward<Args>(args)...);
+			}
+
+			template<typename U>
+			void destroy(U* p) noexcept
+			{
+				p->~U();
+			}
+
+			friend constexpr bool operator==(const JSONTokenAllocator&, const JSONTokenAllocator&) { return true; }
+			friend constexpr bool operator!=(const JSONTokenAllocator&, const JSONTokenAllocator&) { return false; }
 		};
-		friend class JSONTokenAllocator;
+
+		friend class JSONTokenAllocator<JSONObject>;
 
 		typedef SkipProbe::HashMap<StringData, JSONObject> TokenMap;
-		typedef std::vector<JSONObject, JSONTokenAllocator> TokenList;
+		typedef std::vector<JSONObject, JSONTokenAllocator<JSONObject>> TokenList;
 
 		class iterator;
 		typedef iterator const const_iterator;
@@ -653,13 +758,17 @@ namespace LightningJSON
 
 	protected:
 		JSONObject(StringData const& myKey, char const*& data, JSONType expectedType);
-		JSONObject(JSONType statedType, string_view const& data);
+		JSONObject(JSONType statedType, char const* data);
+		JSONObject(JSONType statedType, char const* data, size_t length);
+		JSONObject(JSONType statedType, std::string const& data);
+		JSONObject(JSONType statedType, std::string_view const& data);
 		JSONObject(JSONType statedType, bool data);
 		JSONObject(JSONType statedType, long long data);
 		JSONObject(JSONType statedType, unsigned long long data);
 		JSONObject(JSONType statedType);
 		JSONObject(JSONType statedType, long double data);
-		JSONObject(StringData const& myKey, JSONType statedType, string_view const& data);
+		JSONObject(StringData const& myKey, JSONType statedType, std::string const& data);
+		JSONObject(StringData const& myKey, JSONType statedType, std::string_view const& data);
 		JSONObject(StringData const& myKey, JSONType statedType, bool data);
 		JSONObject(StringData const& myKey, JSONType statedType, long long data);
 		JSONObject(StringData const& myKey, JSONType statedType, unsigned long long data);
@@ -697,7 +806,7 @@ namespace LightningJSON
 			{
 				TokenMap asObject;
 				TokenList asArray;
-				nullptr_t asNull;
+				std::nullptr_t asNull;
 				// Construction and destruction handled in Holder constructor/destructor.
 				Children() : asNull(nullptr) {}
 				~Children() {}
@@ -715,7 +824,7 @@ namespace LightningJSON
 
 		Holder* m_holder;
 		StringData m_key;
-		static JSONObject GetEmpty()
+		static JSONObject const& GetEmpty()
 		{
 			static JSONObject staticEmpty(JSONType::Empty);
 			return staticEmpty;
@@ -805,13 +914,13 @@ namespace LightningJSON
 			return size_t(-1);
 		}
 
-		string_view Key() const
+		std::string_view Key() const
 		{
 			if (type == JSONType::Array)
 			{
 				return "";
 			}
-			return string_view(mapIter->key.c_str(), mapIter->key.length());
+			return std::string_view(mapIter->key.c_str(), mapIter->key.length());
 		}
 
 		JSONObject& Value()

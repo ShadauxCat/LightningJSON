@@ -41,7 +41,7 @@
 #define CITYHASH_bswap_32(x) _byteswap_ulong(x)
 #define CITYHASH_bswap_64(x) _byteswap_uint64(x)
 
-#elif defined(__ORBIS__)
+#elif defined(__ORBIS__) || defined(__PROSPERO__)
 
 #include <machine/endian.h>
 #define CITYHASH_bswap_32(x) __bswap32(x)
@@ -99,9 +99,10 @@
 
 #endif
 
-#if !defined(SPRAWL_BIG_ENDIAN) || !defined(SPRAWL_LITTLE_ENDIAN)
+#if !defined(CITYHASH_BIG_ENDIAN) || !defined(CITYHASH_LITTLE_ENDIAN)
 #	if (defined(__BIG_ENDIAN__) && !defined(__LITTLE_ENDIAN__)) || \
     (defined(_BIG_ENDIAN) && !defined(_LITTLE_ENDIAN)) || \
+	(defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || \
     defined(__ARMEB__) || \
     defined(__THUMBEB__) || \
     defined(__AARCH64EB__) || \
@@ -113,6 +114,7 @@
 #define CITYHASH_uint64_in_expected_order(x) (CITYHASH_bswap_64(x))
 #	elif (defined(__LITTLE_ENDIAN__) && !defined(__BIG_ENDIAN__)) || \
     (defined(_LITTLE_ENDIAN) && !defined(_BIG_ENDIAN)) || \
+	(defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)) || \
     defined(__ARMEL__) || \
     defined(__THUMBEL__) || \
     defined(__AARCH64EL__) || \
@@ -125,7 +127,16 @@
 #	else
 #		error "Could not detect endianness - please define both SPRAWL_BIG_ENDIAN and SPRAWL_LITTLE_ENDIAN"
 #	endif
+#else
+#	if defined(CITYHASH_BIG_ENDIAN)
+#define CITYHASH_uint32_in_expected_order(x) (CITYHASH_bswap_32(x))
+#define CITYHASH_uint64_in_expected_order(x) (CITYHASH_bswap_64(x))
+#	elif defined(CITYHASH_LITTLE_ENDIAN)
+#define CITYHASH_uint32_in_expected_order(x) (x)
+#define CITYHASH_uint64_in_expected_order(x) (x)
+#	endif
 #endif
+
 #if defined(__INTEL_COMPILER_BUILD_DATE) || defined(__clang__) || defined(__GNUC__)
 #define CITYHASH_LIKELY(x) (__builtin_expect(!!(x), 1))
 #else

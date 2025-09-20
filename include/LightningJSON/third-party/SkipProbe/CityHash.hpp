@@ -117,9 +117,9 @@ namespace SkipProbe
 	inline size_t CityHash(const void* const data, const size_t size)
 	{
 #if defined(_WIN64) || defined(_M_X64) || defined(__x86_64__)
-		return CityHash64(reinterpret_cast<const char* const>(data), size);
+		return CityHash64(reinterpret_cast<const char*>(data), size);
 #else
-		return CityHash32(reinterpret_cast<const char* const>(data), size);
+		return CityHash32(reinterpret_cast<const char*>(data), size);
 #endif
 	}
 }

@@ -14,6 +14,27 @@ struct SkipProbe::Node
 {
 	t_KeyType key;
 	t_ValueType value;
+
+	void Dispose()
+	{
+		key.~t_KeyType();
+		value.~t_ValueType();
+	}
+};
+
+template<typename t_KeyType>
+struct SkipProbe::Node<t_KeyType, void>
+{
+	union
+	{
+		t_KeyType key;
+		char value;
+	};
+
+	void Dispose()
+	{
+		key.~t_KeyType();
+	}
 };
 
 template<typename t_KeyType, typename t_ValueType>
